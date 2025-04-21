@@ -1,0 +1,113 @@
+version: '3'
+
+services:
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - JWT_SECRET=your_jwt_secret
+      - PRODUCT_SERVICE_URL=http://product-service:3001
+      - ORDER_SERVICE_URL=http://order-service:3002
+      - USER_SERVICE_URL=http://user-service:3003
+    depends_on:
+      - product-service
+      - order-service
+      - user-service
+    networks:
+      - ecommerce-network
+
+  # Product Service
+  product-service:
+    build:
+      context: ./product-service
+      dockerfile: Dockerfile
+    container_name: product-service
+    restart: always
+    environment:
+      - PORT=3001
+      - MONGO_URI=mongodb://product-db:27017/product-service
+    depends_on:
+      - product-db
+    networks:
+      - ecommerce-network
+
+  # Order Service
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: order-service
+    restart: always
+    environment:
+      - PORT=3002
+      - MONGO_URI=mongodb://order-db:27017/order-service
+      - PRODUCT_SERVICE_URL=http://product-service:3001
+      - USER_SERVICE_URL=http://user-service:3003
+    depends_on:
+      - order-db
+      - product-service
+      - user-service
+    networks:
+      - ecommerce-network
+
+  # User Service
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    restart: always
+    environment:
+      - PORT=3003
+      - MONGO_URI=mongodb://user-db:27017/user-service
+      - JWT_SECRET=your_jwt_secret
+    depends_on:
+      - user-db
+    networks:
+      - ecommerce-network
+
+  # MongoDB for Product Service
+  product-db:
+    image: mongo:6
+    container_name: product-db
+    restart: always
+    volumes:
+      - product-data:/data/db
+    networks:
+      - ecommerce-network
+
+  # MongoDB for Order Service
+  order-db:
+    image: mongo:6
+    container_name: order-db
+    restart: always
+    volumes:
+      - order-data:/data/db
+    networks:
+      - ecommerce-network
+
+  # MongoDB for User Service
+  user-db:
+    image: mongo:6
+    container_name: user-db
+    restart: always
+    volumes:
+      - user-data:/data/db
+    networks:
+      - ecommerce-network
+
+volumes:
+  product-data:
+  order-data:
+  user-data:
+
+networks:
+  ecommerce-network:
+    driver: bridge
